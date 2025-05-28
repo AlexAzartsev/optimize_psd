@@ -42,6 +42,14 @@ This tool uses [psd_ockham](https://github.com/Playrix/psd_ockham) to reduce the
    ```bash
    ./optimize_psd
    ```
+   **Important**: When you first try to run the script, macOS may block its execution for security reasons. If this happens:
+   - Click "Cancel" on the security warning
+   - Go to System Settings → Privacy & Security
+   - Scroll down to find a message about the blocked script
+   - Click "Open Anyway" to allow the script to run
+   - In the confirmation dialog that appears, click "Open"
+   - You'll only need to do this once
+
 3. Optimized files will be saved in the `output` directory with the same folder structure as input
 4. The script will display a summary of the optimization results, including:
    - Original file size
