@@ -1,5 +1,6 @@
 #!/bin/bash
 
+VERSION='1.0.0'
 # Clear screen without scroll
 printf "\033c"
 # Define script, input, and output directories
@@ -73,7 +74,7 @@ fi
 
 # Print header
 echo "╭─────────────────────────────────────────────────────────────────────────────╮"
-echo "│ Wrapper script by Anastasiia Azartseva                                      │"
+printf "│ %-64s %10s │\n" "Wrapper script by Anastasiia Azartseva" "v$VERSION"
 echo -e "│ It optimizes files in the \033[1;4minput\033[0m folder using psd_ockham.                    │"
 echo -e "│ Optimized files are saved in the \033[1;4moutput\033[0m folder.                             │"
 echo "│ psd_ockham reduces PSD/PSB size by removing excessive metadata.             │"
