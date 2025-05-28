@@ -30,9 +30,19 @@ while IFS= read -r -d '' file; do
     files+=("$file")
 done < <(find "$INPUT_DIR" -type f -print0)
 
+# Filter psd/psb files
+psd_files=()
+for file in "${files[@]}"; do
+    ext="${file##*.}"
+    ext_lower=$(echo "$ext" | tr '[:upper:]' '[:lower:]')
+    if [[ "$ext_lower" == "psd" || "$ext_lower" == "psb" ]]; then
+        psd_files+=("$file")
+    fi
+done
+
 # Exit if no files found
-if [ ${#files[@]} -eq 0 ]; then
-  echo -e "No files found in the \033[1;4minput\033[0m folder."
+if [ ${#psd_files[@]} -eq 0 ]; then
+  echo -e "No PSD or PSB files found in the \033[1;4minput\033[0m folder."
   echo -e "To use this script:"
   echo -e "  1. Place your .psd or .psb files inside the \033[1;4minput\033[0m folder."
   echo -e "  2. Re-run the script."
