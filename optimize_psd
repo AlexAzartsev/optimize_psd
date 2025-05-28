@@ -1,0 +1,136 @@
+#!/bin/bash
+
+# Clear screen without scroll
+printf "\033c"
+# Define script, input, and output directories
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "$SCRIPT_DIR"
+INPUT_DIR="input"
+OUTPUT_DIR="output"
+
+# Ensure output directory exists
+mkdir -p "$INPUT_DIR"
+mkdir -p "$OUTPUT_DIR"
+
+# Gather matching files into an array safely
+shopt -s nullglob
+files=("$INPUT_DIR"/*.psd "$INPUT_DIR"/*.psb)
+shopt -u nullglob
+
+# Ensure psd_ockham executable exists
+if [ ! -x "$SCRIPT_DIR/psd_ockham" ]; then
+    echo -e "\033[1;31mError:\033[0m \033[1;4mpsd_ockham\033[0m not found in the script folder."
+    echo "Please make sure the optimizer binary (psd_ockham) is present and executable:"
+    echo -e "  → Place it next to this script: \033[1m$SCRIPT_DIR/psd_ockham\033[0m"
+    echo -e "  → Ensure it's executable: \033[1mchmod +x psd_ockham\033[0m"
+    echo
+    echo "You can Download the latest version from:"
+    echo "https://github.com/Playrix/psd_ockham/releases"
+    exit 1
+fi
+
+# Exit if no files found
+if [ ${#files[@]} -eq 0 ]; then
+  echo -e "No PSD or PSB files found in the \033[1;4minput\033[0m folder."
+  echo -e "To use this script:"
+  echo -e "  1. Place your .psd or .psb files inside the \033[1;4minput\033[0m folder."
+  echo -e "  2. Re-run the script."
+  exit 1
+fi
+
+# Determine the maximum filename length for formatting
+max_length=8  # Minimum
+for file in "${files[@]}"; do
+    filename=$(basename -- "$file")
+    length=${#filename}
+    if [ $length -gt $max_length ]; then
+        max_length=$length
+    fi
+done
+
+# Relaunch in macOS Terminal if not already running there
+if [[ "$TERM_PROGRAM" != "Apple_Terminal" ]]; then
+    osascript <<EOF
+    tell application "Terminal"
+        do script "cd \"${SCRIPT_DIR}\" && ./$(basename "$0")"
+        activate
+    end tell
+EOF
+    exit
+fi
+
+
+# Print header
+echo "╭─────────────────────────────────────────────────────────────────────────────╮"
+echo "│ Wrapper script by Anastasiia Azartseva                                      │"
+echo -e "│ It optimizes files in the \033[1;4minput\033[0m folder using psd_ockham.                    │"
+echo -e "│ Optimized files are saved in the \033[1;4moutput\033[0m folder.                             │"
+echo "│ psd_ockham reduces PSD/PSB size by removing excessive metadata.             │"
+echo "╰─────────────────────────────────────────────────────────────────────────────╯"
+
+# Print table header with dynamic border
+total_width=$((20 + 3 + 20 + 3 + 16 + 3 + 16 + 3 - 5))
+printf "\n%*s\n" "$total_width" '' | tr ' ' '='
+printf "| %-20s | %-18s | %-14s | %-14s |\n" "Filename" "Original Size (MB)" "New Size (MB)" "Saved (MB)"
+printf "%*s\n" "$total_width" '' | tr ' ' '='
+
+shorten_filename() {
+    local name="$1"
+    local max=20
+
+    if [ ${#name} -le $max ]; then
+        echo "$name"
+    else
+        local ext=""
+        local base="$name"
+
+        # Extract extension
+        if [[ "$name" == *.* ]]; then
+            ext=".${name##*.}"
+            base="${name%.*}"
+        fi
+
+        local avail=$((max - ${#ext} - 2))  # space available for start + end
+        local left=$(( (avail * 2) / 3 ))   # take ~2/3 from left
+        local right=$((avail - left))       # rest from right
+
+        local start="${base:0:left}"
+        local end="${base: -right}"
+
+        echo "${start}..${end}${ext}"
+    fi
+}
+
+# Initialize total
+total_saved=0
+
+# Process each file
+for file in "${files[@]}"; do
+    filename=$(basename -- "$file")
+    output_file="$OUTPUT_DIR/$filename"
+
+    # Get original file size
+    if [ -f "$file" ]; then
+        original_size=$(du -m "$file" | cut -f1)
+    else
+        original_size=0
+    fi
+
+    # Run optimizer
+    ./psd_ockham "$file" "$output_file"
+    result=$?
+
+    if [ $result -eq 0 ] && [ -f "$output_file" ]; then
+        new_size=$(du -m "$output_file" | cut -f1)
+        size_difference=$((original_size - new_size))
+        total_saved=$((total_saved + size_difference))
+        short_name=$(shorten_filename "$filename")
+        printf "| %-20s | %-18s | %-14s | %-14s |\n" "$short_name" "$original_size MB" "$new_size MB" "$size_difference MB"
+    else
+        short_name=$(shorten_filename "$filename")
+        printf "| %-20s | %-18s | %-14s | %-14s |\n" "$short_name" "$original_size MB" "Failed" "N/A"
+    fi
+done
+
+# Final summary
+printf "\nTotal space saved: \033[1;4m%d MB\033[0m\n\n" "$total_saved"
