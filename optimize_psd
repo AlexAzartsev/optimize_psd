@@ -12,11 +12,6 @@ OUTPUT_DIR="output"
 mkdir -p "$INPUT_DIR"
 mkdir -p "$OUTPUT_DIR"
 
-# Gather matching files into an array safely
-shopt -s nullglob
-files=("$INPUT_DIR"/*.psd "$INPUT_DIR"/*.psb)
-shopt -u nullglob
-
 # Ensure psd_ockham executable exists
 if [ ! -x "$SCRIPT_DIR/psd_ockham" ]; then
     echo -e "\033[1;31mError:\033[0m \033[1;4mpsd_ockham\033[0m not found in the script folder."
@@ -29,9 +24,15 @@ if [ ! -x "$SCRIPT_DIR/psd_ockham" ]; then
     exit 1
 fi
 
+# Find all files recursively
+files=()
+while IFS= read -r -d '' file; do
+    files+=("$file")
+done < <(find "$INPUT_DIR" -type f -print0)
+
 # Exit if no files found
 if [ ${#files[@]} -eq 0 ]; then
-  echo -e "No PSD or PSB files found in the \033[1;4minput\033[0m folder."
+  echo -e "No files found in the \033[1;4minput\033[0m folder."
   echo -e "To use this script:"
   echo -e "  1. Place your .psd or .psb files inside the \033[1;4minput\033[0m folder."
   echo -e "  2. Re-run the script."
@@ -104,31 +105,36 @@ shorten_filename() {
 # Initialize total
 total_saved=0
 
-# Process each file
-for file in "${files[@]}"; do
-    filename=$(basename -- "$file")
-    output_file="$OUTPUT_DIR/$filename"
+# Process files
+for src_file in "${files[@]}"; do
+    rel_path="${src_file#$INPUT_DIR/}"
+    dst_file="$OUTPUT_DIR/$rel_path"
+    dst_dir="$(dirname "$dst_file")"
 
-    # Get original file size
-    if [ -f "$file" ]; then
-        original_size=$(du -m "$file" | cut -f1)
+    mkdir -p "$dst_dir"
+
+    ext="${src_file##*.}"
+    ext_lower=$(echo "$ext" | tr '[:upper:]' '[:lower:]')
+
+    if [[ "$ext_lower" == "psd" || "$ext_lower" == "psb" ]]; then
+        # PSD/PSB optimization
+        original_size=$(du -m "$src_file" | cut -f1)
+        ./psd_ockham "$src_file" "$dst_file"
+        result=$?
+
+        if [ $result -eq 0 ] && [ -f "$dst_file" ]; then
+            new_size=$(du -m "$dst_file" | cut -f1)
+            saved=$((original_size - new_size))
+            total_saved=$((total_saved + saved))
+            short_name=$(shorten_filename "$rel_path")
+            printf "| %-20s | %-18s | %-14s | %-14s |\n" "$short_name" "$original_size MB" "$new_size MB" "$saved MB"
+        else
+            short_name=$(shorten_filename "$rel_path")
+            printf "| %-20s | %-18s | %-14s | %-14s |\n" "$short_name" "$original_size MB" "Failed" "N/A"
+        fi
     else
-        original_size=0
-    fi
-
-    # Run optimizer
-    ./psd_ockham "$file" "$output_file"
-    result=$?
-
-    if [ $result -eq 0 ] && [ -f "$output_file" ]; then
-        new_size=$(du -m "$output_file" | cut -f1)
-        size_difference=$((original_size - new_size))
-        total_saved=$((total_saved + size_difference))
-        short_name=$(shorten_filename "$filename")
-        printf "| %-20s | %-18s | %-14s | %-14s |\n" "$short_name" "$original_size MB" "$new_size MB" "$size_difference MB"
-    else
-        short_name=$(shorten_filename "$filename")
-        printf "| %-20s | %-18s | %-14s | %-14s |\n" "$short_name" "$original_size MB" "Failed" "N/A"
+        # Copy other files unchanged
+        cp "$src_file" "$dst_file"
     fi
 done
 

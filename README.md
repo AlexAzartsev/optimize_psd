@@ -9,9 +9,12 @@ This tool uses [psd_ockham](https://github.com/Playrix/psd_ockham) to reduce the
 ## Features
 
 - Batch processing of multiple PSD/PSB files
+- Support for organizing files in subfolders
+- Preserves subfolder structure in the output directory
 - Clear visual feedback on optimization results
 - Automatic creation of input/output directories
 - Preserves original files (optimized versions are saved separately)
+- Copies non-PSD/PSB files unchanged to maintain complete directory structures
 - Detailed summary of space savings
 
 ## Requirements
@@ -33,11 +36,13 @@ This tool uses [psd_ockham](https://github.com/Playrix/psd_ockham) to reduce the
 ## Usage
 
 1. Place your PSD/PSB files in the `input` directory (will be created automatically if it doesn't exist)
+   - You can organize files in subfolders within the `input` directory
+   - The subfolder structure will be preserved in the output
 2. Run the script by double click or with terminal:
    ```bash
    ./optimize_psd
    ```
-3. Optimized files will be saved in the `output` directory
+3. Optimized files will be saved in the `output` directory with the same folder structure as input
 4. The script will display a summary of the optimization results, including:
    - Original file size
    - New file size
@@ -49,9 +54,11 @@ This tool uses [psd_ockham](https://github.com/Playrix/psd_ockham) to reduce the
 The script:
 1. Checks for the presence of the required `psd_ockham` binary
 2. Creates input/output directories if they don't exist
-3. Processes each PSD/PSB file in the input directory
-4. Displays a formatted table with optimization results
-5. Shows the total space saved
+3. Recursively finds all files in the input directory, including those in subfolders
+4. Processes each PSD/PSB file while preserving the subfolder structure in the output
+5. Copies non-PSD/PSB files to the output directory unchanged
+6. Displays a formatted table with optimization results
+7. Shows the total space saved
 
 ## Credits
 
