@@ -32,7 +32,7 @@ This tool uses [psd_ockham](https://github.com/Playrix/psd_ockham) to reduce the
    chmod +x optimize_psd
    chmod +x psd_ockham
    ```
-5. Alternativly download and unpack optimize_psd_vX.X.X.zip
+5. Alternativly download and unpack optimize_psd_vX.X.X.zip from latest release
 
 ## Usage
 
